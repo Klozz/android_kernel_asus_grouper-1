@@ -32,19 +32,15 @@
  * v1.3.1 Added switch to enable or disable hotplug
  * v1.4.0 Added WQ(Workqueue) for resume on LCD_notify
  * and introducing touch boost
- * v1.4.1 Grouper only or devices withour cpu_idle on cpufreq
  */
 
-#include <asm/cputime.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/kernel_stat.h>
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/input.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
-#include <linux/tick.h>
 #include <linux/lcd_notify.h>
 #include <linux/cpufreq.h>
 
@@ -86,6 +82,8 @@ static struct workqueue_struct *Alessa_plug_boost_wq;
 static struct delayed_work Alessa_plug_touch_boost;
 //CPU CHARGE
 static unsigned int last_load[4] ={0, 0, 0, 0};
+
+
 
 struct cpu_load_data{
 	u64 prev_cpu_idle;
