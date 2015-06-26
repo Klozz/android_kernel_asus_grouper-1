@@ -36,11 +36,13 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/kernel_stat.h>
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/input.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
+#include <linux/tick.h>
 #include <linux/lcd_notify.h>
 #include <linux/cpufreq.h>
 
@@ -54,6 +56,7 @@ static int resume_cpu_num = 3;
 static int endurance_level = 0;
 static int device_cpu = 4;
 static int core_limit = 4;
+static bool io_is_busy = 1;
 
 /*#define CPU_UP_THRESHOLD      (65)
 #define CPU_DOWN_DIFFERENTIAL (10)
@@ -149,6 +152,47 @@ for(cpu = 1; cpu <= resume_cpu_num; cpu++)
 
 pr_info("%s: all cpu were online\n", ALESSAPLUG);
 }
+
+
+//cpu idle
+
+static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
+							cputime64_t *wall)
+{
+	cputime64_t idle_time;
+	cputime64_t cur_wall_time;
+	cputime64_t busy_time;
+
+	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
+	busy_time = cputime64_add(kstat_cpu(cpu).cpustat.user,
+			kstat_cpu(cpu).cpustat.system);
+
+	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.irq);
+	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.softirq);
+	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.steal);
+	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.nice);
+
+	idle_time = cputime64_sub(cur_wall_time, busy_time);
+	if (wall)
+		*wall = (cputime64_t)jiffies_to_usecs(cur_wall_time);
+
+	return (cputime64_t)jiffies_to_usecs(idle_time);
+}
+
+static inline cputime64_t get_cpu_idle_time(unsigned int cpu,
+					    cputime64_t *wall, int io_busy)
+{
+	u64 idle_time = get_cpu_idle_time_us(cpu, wall);
+
+	if (idle_time == -1ULL)
+		idle_time = get_cpu_idle_time_jiffy(cpu, wall);
+	else if (!io_is_busy)
+		idle_time += get_cpu_iowait_time_us(cpu, wall);
+
+	return idle_time;
+}
+//finish
+
 /*static inline void cpu_online_all(void) //All cpu's enabled
 {
 	unsigned int cpu;
