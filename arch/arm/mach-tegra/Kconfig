@@ -219,6 +219,13 @@ config MACH_GROUPER
        help
          Support for NVIDIA grouper development platform
 
+config ALESSA_PLUG
+	bool "Enable plugging down/up of cores using powersuspend"
+	help
+	  This driver uses powersuspend to take down the cpu cores
+	  on a quad core device.
+	  A New Hotplug for Quad-Core devices created by klozz Jesus AKA TeamMEX
+
 
 choice
        prompt "Tegra platform type"
